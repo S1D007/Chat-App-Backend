@@ -81,10 +81,12 @@ io.on("connection", (socket) => {
         socket.join(room);
     });
 
-    socket.on("message", async ({ user_id, chat_id, message }) => {
+    socket.on("message", async ({ user_id, chat_id, message, username }) => {
         socket.to(chat_id).emit("message", {
             user_id,
-            message
+            message,
+            username,
+            timestamp: new Date().toString()
         })
         const msg = new Message({
             message,
