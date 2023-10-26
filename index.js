@@ -76,10 +76,13 @@ const Chat = mongoose.model("Chat", {
 })
 
 io.on("connection", (socket) => {
-    socket.on('joinRoom', (room, username) => {
-        // console.log(`${username} joined ${room}`)
+    socket.on('joinRoom', (room) => {
         socket.join(room);
     });
+
+    socket.on("join me", (user_id) => {
+        socket.join(user_id)
+    })
 
     socket.on("message", async ({ user_id, chat_id, message, username }) => {
         socket.to(chat_id).emit("message", {
@@ -97,6 +100,19 @@ io.on("connection", (socket) => {
         const chat = await Chat.findById(chat_id)
         chat.messages.push(msg)
         await chat.save()
+    })
+
+    socket.on("new chat", async ({ my_user_id, user_id, type }) => {
+        socket.to(user_id).emit("new chat", {
+            my_user_id,
+            type
+        })
+    })
+
+    socket.on("new message", async ({ my_user_id, user_id }) => {
+        socket.to(user_id).emit("new message", {
+            my_user_id,
+        })
     })
 })
 
@@ -206,7 +222,6 @@ app.get("/users", authenticateJWT, async (req, res) => {
 
         return OK(res, usersNotInChatList);
     } catch (e) {
-        console.log(e);
         return NotOk(res, e.message);
     }
 });
@@ -254,7 +269,6 @@ app.post("/create-chat-individual", authenticateJWT, async (req, res) => {
 app.post("/create-chat-group", authenticateJWT, async (req, res) => {
     try {
         const { members, name } = req.body
-        console.log(req.body)
         const chat = new Chat({
             members,
             name,
@@ -294,7 +308,6 @@ app.get('/chats', authenticateJWT, async (req, res) => {
             const filteredMembers = chat.members.filter(member => member._id.toString() !== userId);
             return { ...chat.toObject(), members: filteredMembers };
         });
-        console.log(filteredChats)
 
         return OK(res, filteredChats);
     } catch (e) {
